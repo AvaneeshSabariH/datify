@@ -1,0 +1,190 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand palette */
+  --color-navy-950:  #070b1f;
+  --color-navy-900:  #0a0f28;
+  --color-navy-800:  #0d1232;
+  --color-navy-700:  #111840;
+  --color-navy-600:  #1a2456;
+  --color-indigo:    #4f46e5;
+  --color-indigo-400:#818cf8;
+  --color-cyan:      #06b6d4;
+  --color-cyan-400:  #67e8f9;
+  --color-sky-400:   #38bdf8;
+  --color-blue-500:  #3b82f6;
+
+  /* Physical shadow system */
+  --shadow-rim-light: inset 0 1px 0 rgba(255, 255, 255, 1);
+  --shadow-deep-navy: 0 4px 24px rgba(10, 15, 40, 0.45),
+                      0 1px 4px  rgba(10, 15, 40, 0.30);
+  --shadow-bento:     var(--shadow-rim-light), var(--shadow-deep-navy);
+  --shadow-bento-hover: inset 0 1px 0 rgba(255,255,255,1),
+                        0 8px 40px rgba(10,15,40,0.55),
+                        0 2px 8px rgba(10,15,40,0.40);
+  --shadow-upload-glow: inset 0 1px 0 rgba(255,255,255,1),
+                        0 0 60px rgba(79,70,229,0.25),
+                        0 8px 40px rgba(10,15,40,0.55);
+
+  /* Glassmorphic tooltip */
+  --tooltip-bg:      rgba(255, 255, 255, 0.70);
+  --tooltip-border:  rgba(255, 255, 255, 0.40);
+
+  /* Glow ring colours */
+  --glow-from:       #4f46e5;
+  --glow-to:         #06b6d4;
+
+  --background: var(--color-navy-900);
+  --foreground: #f0f4ff;
+  --font-sans:  "Inter", system-ui, sans-serif;
+}
+
+/* ── Tailwind v4 Theme Overrides ───────────────────────────────────────────── */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans:        "Inter", system-ui, sans-serif;
+
+  /* Expose brand colours as Tailwind utilities */
+  --color-navy-950:  var(--color-navy-950);
+  --color-navy-900:  var(--color-navy-900);
+  --color-navy-800:  var(--color-navy-800);
+  --color-navy-700:  var(--color-navy-700);
+  --color-navy-600:  var(--color-navy-600);
+  --color-brand-indigo:    var(--color-indigo);
+  --color-brand-indigo-400:var(--color-indigo-400);
+  --color-brand-cyan:      var(--color-cyan);
+  --color-brand-cyan-400:  var(--color-cyan-400);
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* ── Custom Utility Classes ────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Physical card shadows */
+  .shadow-rim-light   { box-shadow: var(--shadow-rim-light); }
+  .shadow-deep-navy   { box-shadow: var(--shadow-deep-navy); }
+  .shadow-bento       { box-shadow: var(--shadow-bento); }
+  .shadow-bento-hover { box-shadow: var(--shadow-bento-hover); }
+  .shadow-upload-glow { box-shadow: var(--shadow-upload-glow); }
+
+  /* Gradient text helpers */
+  .text-gradient-indigo-cyan {
+    background: linear-gradient(135deg, var(--color-indigo-400), var(--color-cyan-400));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-white-blue {
+    background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Scrollbar hide */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Hero Gradient Text ─────────────────────────────────────────────────────
+   Animated spectrum shift: Sky Blue → Indigo → Violet → Blue → Cyan → loop.
+   Uses background-position animation on a 300%-wide gradient strip.
+──────────────────────────────────────────────────────────────────────────── */
+
+.hero-gradient-text {
+  background-image: linear-gradient(
+    90deg,
+    #38bdf8 0%,    /* sky-400    */
+    #818cf8 20%,   /* indigo-400 */
+    #4f46e5 40%,   /* indigo-600 */
+    #3b82f6 60%,   /* blue-500   */
+    #06b6d4 80%,   /* cyan-500   */
+    #38bdf8 100%   /* sky-400 (loop)  */
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s linear infinite;
+}
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+
+/* Animated hero title gradient */
+@keyframes gradient-shift {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Rotating conic-gradient border for the AI "thinking" glow */
+@keyframes spin-glow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Subtle pulse for the "thinking" label */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* Fade-up entrance for bento cards */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Full-view fade-in for the workspace reveal */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Gentle scale-in for the landing card */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Upload card drag-active pulse */
+@keyframes drag-pulse {
+  0%, 100% { box-shadow: var(--shadow-bento); }
+  50%       { box-shadow: var(--shadow-upload-glow); }
+}
+
+.animate-spin-glow   { animation: spin-glow   2s linear infinite; }
+.animate-pulse-soft  { animation: pulse-soft  1.8s ease-in-out infinite; }
+.animate-fade-up     { animation: fade-up     0.5s ease-out both; }
+.animate-fade-in     { animation: fade-in     0.4s ease-out both; }
+.animate-scale-in    { animation: scale-in    0.45s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-drag-pulse  { animation: drag-pulse  1.2s ease-in-out infinite; }
