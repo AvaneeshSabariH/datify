@@ -14,6 +14,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import EChartWrapper from "@/components/EChartWrapper";
+import toast, { Toaster } from "react-hot-toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -24,137 +25,6 @@ interface FileSchema {
   columns: number;
 }
 
-// ── Chart data ─────────────────────────────────────────────────────────────
-
-const heroBarOptions = {
-  backgroundColor: "transparent",
-  grid: { left: 24, right: 24, top: 40, bottom: 24, containLabel: true },
-  xAxis: {
-    type: "category" as const,
-    data: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
-    axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
-    axisLabel: { color: "rgba(255,255,255,0.55)", fontFamily: "Inter, sans-serif", fontSize: 11 },
-    splitLine: { show: false },
-  },
-  yAxis: {
-    type: "value" as const,
-    axisLabel: { color: "rgba(255,255,255,0.55)", fontFamily: "Inter, sans-serif", fontSize: 11 },
-    splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)" } },
-    axisLine: { show: false },
-  },
-  series: [
-    {
-      name: "Revenue",
-      type: "bar" as const,
-      data: [42, 68, 55, 82, 74, 95, 88, 112],
-      barMaxWidth: 36,
-      itemStyle: {
-        borderRadius: [6, 6, 0, 0],
-        color: {
-          type: "linear" as const,
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: "#818cf8" },
-            { offset: 1, color: "#4f46e5" },
-          ],
-        },
-      },
-      emphasis: {
-        itemStyle: {
-          color: {
-            type: "linear" as const,
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: "#67e8f9" },
-              { offset: 1, color: "#06b6d4" },
-            ],
-          },
-        },
-      },
-    },
-  ],
-  tooltip: { trigger: "axis" as const },
-};
-
-const lineOptions = {
-  backgroundColor: "transparent",
-  grid: { left: 16, right: 16, top: 24, bottom: 16, containLabel: true },
-  xAxis: {
-    type: "category" as const,
-    data: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-    axisLine: { show: false },
-    axisTick: { show: false },
-    axisLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
-    splitLine: { show: false },
-  },
-  yAxis: {
-    type: "value" as const,
-    axisLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
-    splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
-    axisLine: { show: false },
-  },
-  series: [
-    {
-      type: "line" as const,
-      data: [30, 58, 44, 73, 62],
-      smooth: true,
-      symbol: "circle",
-      symbolSize: 6,
-      lineStyle: { color: "#06b6d4", width: 2.5 },
-      itemStyle: { color: "#06b6d4", borderColor: "#0d1232", borderWidth: 2 },
-      areaStyle: {
-        color: {
-          type: "linear" as const,
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: "rgba(6,182,212,0.25)" },
-            { offset: 1, color: "rgba(6,182,212,0)" },
-          ],
-        },
-      },
-    },
-  ],
-  tooltip: { trigger: "axis" as const },
-};
-
-const scatterOptions = {
-  backgroundColor: "transparent",
-  grid: { left: 16, right: 16, top: 16, bottom: 16, containLabel: true },
-  xAxis: {
-    type: "value" as const,
-    axisLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
-    splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
-    axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
-  },
-  yAxis: {
-    type: "value" as const,
-    axisLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
-    splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
-    axisLine: { show: false },
-  },
-  series: [
-    {
-      type: "scatter" as const,
-      data: [
-        [10, 8], [20, 14], [15, 22], [35, 19], [28, 30],
-        [42, 25], [50, 38], [38, 44], [55, 52], [60, 45],
-      ],
-      symbolSize: 10,
-      itemStyle: {
-        color: {
-          type: "radial" as const,
-          x: 0.5, y: 0.5, r: 0.5,
-          colorStops: [
-            { offset: 0, color: "#818cf8" },
-            { offset: 1, color: "#4f46e5" },
-          ],
-        },
-        opacity: 0.85,
-      },
-    },
-  ],
-  tooltip: { trigger: "item" as const },
-};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -368,9 +238,11 @@ function UploadCard({
 function ChatCard({
   fileName,
   onQuery,
+  disabled = false,
 }: {
   fileName: string;
   onQuery: (q: string) => void;
+  disabled?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -385,7 +257,7 @@ function ChatCard({
 
   const submit = () => {
     const q = query.trim();
-    if (!q) return;
+    if (!q || disabled) return;
     onQuery(q);
     setQuery("");
   };
@@ -393,6 +265,8 @@ function ChatCard({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
   };
+
+  const canSubmit = query.trim() && !disabled;
 
   return (
     <div className="rounded-2xl bg-[#0d1232] shadow-bento p-5 flex flex-col gap-4 h-full">
@@ -407,7 +281,9 @@ function ChatCard({
           </svg>
         </div>
         <div>
-          <p className="text-xs font-semibold text-white/80 leading-none">Run Query</p>
+          <p className="text-xs font-semibold text-white/80 leading-none">
+            {disabled ? "Analyzing…" : "Run Query"}
+          </p>
           <p className="text-[10px] text-white/30 mt-0.5 truncate max-w-[140px]" title={fileName}>
             {fileName}
           </p>
@@ -424,14 +300,19 @@ function ChatCard({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={"e.g. Show me a bar chart of revenue by month\nor  Find outliers in the price column"}
+          placeholder={disabled
+            ? "Agent is processing your request…"
+            : "e.g. Show me a bar chart of revenue by month\nor  Find outliers in the price column"
+          }
           aria-label="Analysis query"
+          disabled={disabled}
           rows={4}
           className={[
             "w-full bg-transparent resize-none px-4 py-3",
             "text-sm text-white/80 placeholder:text-white/20",
             "focus:outline-none scrollbar-hide",
             "leading-relaxed font-medium",
+            disabled ? "opacity-50 cursor-not-allowed" : "",
           ].join(" ")}
           style={{ maxHeight: "160px", overflowY: "auto", fontFamily: "Inter, sans-serif" }}
         />
@@ -440,29 +321,38 @@ function ChatCard({
       {/* Footer — hint + submit */}
       <div className="flex items-center justify-between gap-3">
         <span className="text-[10px] text-white/20 font-medium hidden sm:block">
-          ⌘ Enter to run
+          {disabled ? "" : "⌘ Enter to run"}
         </span>
         <button
           onClick={submit}
-          disabled={!query.trim()}
+          disabled={!canSubmit}
           className={[
             "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold",
             "transition-all duration-200",
-            query.trim()
+            canSubmit
               ? "text-white cursor-pointer hover:scale-[1.03] active:scale-[0.98]"
               : "text-white/25 cursor-not-allowed",
           ].join(" ")}
           style={{
-            background: query.trim()
+            background: canSubmit
               ? "linear-gradient(135deg, #4f46e5, #06b6d4)"
               : "rgba(255,255,255,0.05)",
-            boxShadow: query.trim() ? "0 0 20px rgba(79,70,229,0.35)" : "none",
+            boxShadow: canSubmit ? "0 0 20px rgba(79,70,229,0.35)" : "none",
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M1 6h10M7 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Run Query
+          {disabled ? (
+            <>
+              <span className="animate-pulse-soft">⏳</span>
+              Analyzing…
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M1 6h10M7 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Run Query
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -476,46 +366,128 @@ export default function Page() {
   const [isParsing, setIsParsing] = useState(false);
   const [workspaceVisible, setWorkspaceVisible] = useState(false);
 
+  // ── Backend-connected state ────────────────────────────────────────────
+  const [csvSessionPath, setCsvSessionPath] = useState("");
+  const [schemaJson, setSchemaJson] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [dynamicChartData, setDynamicChartData] = useState<Record<string, unknown> | null>(null);
+
   /** Called when the user selects or drops a file */
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     setIsParsing(true);
-    // Simulate a 1-second profile/parse step
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Upload failed");
+      }
+
+      const data = await res.json();
+      setCsvSessionPath(data.csv_session_path);
+      setSchemaJson(data.schema_json);
+
+      // Parse schema_json to extract real profiler stats
+      const schema = JSON.parse(data.schema_json);
       setFileSchema({
         name: file.name,
         size: file.size,
-        rowCount: Math.floor(Math.random() * 90000) + 1000,
-        columns: Math.floor(Math.random() * 20) + 4,
+        rowCount: schema.dataset_info?.total_rows ?? 0,
+        columns: schema.dataset_info?.total_columns ?? 0,
       });
-      setIsParsing(false);
+
       // Tiny delay so the DOM re-renders before adding the class
-      requestAnimationFrame(() => setWorkspaceVisible(true));
-    }, 1000);
+      requestAnimationFrame(() => {
+        setWorkspaceVisible(true);
+        toast.success("Dataset loaded successfully!");
+      });
+    } catch (err) {
+      toast.error(`Upload failed: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      setIsParsing(false);
+    }
   }, []);
 
   /** Logo click — reset everything back to landing */
   const handleReset = useCallback(() => {
     setWorkspaceVisible(false);
     // Wait for fade-out before clearing state
-    setTimeout(() => setFileSchema(null), 200);
+    setTimeout(() => {
+      setFileSchema(null);
+      setCsvSessionPath("");
+      setSchemaJson("");
+      setDynamicChartData(null);
+    }, 200);
   }, []);
 
-  const handleQuery = (q: string) => {
-    // Future: call POST /analyze with the query and fileSchema
-    console.log("[Datify] Query submitted:", q);
+  const handleQuery = async (q: string) => {
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch("http://localhost:8000/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: q,
+          csv_session_path: csvSessionPath,
+          schema_json: schemaJson,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Query failed");
+      }
+
+      const data = await res.json();
+
+      // Store the chart configuration for rendering
+      if (data.chart_json && Object.keys(data.chart_json).length > 0) {
+        setDynamicChartData(data.chart_json);
+      }
+
+      // Version chaining — update to the new CSV path
+      if (data.new_csv_path) {
+        setCsvSessionPath(data.new_csv_path);
+      }
+    } catch (err) {
+      toast.error(`Analysis failed: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
+
+  // Sum null_count across all columns from the real profiler schema.
+  const nullCells = (() => {
+    try {
+      const schema = JSON.parse(schemaJson);
+      return Object.values(
+        schema.columns as Record<string, { null_count: number }>
+      ).reduce(
+        (sum: number, col: { null_count: number }) => sum + (col.null_count ?? 0),
+        0
+      );
+    } catch {
+      return 0;
+    }
+  })();
 
   const stats = fileSchema
     ? [
-        { label: "Total Rows",  value: fileSchema.rowCount.toLocaleString(), delta: "+2.4%", positive: true  },
-        { label: "Columns",     value: String(fileSchema.columns),           delta: "—",     positive: null  },
-        { label: "Null Cells",  value: "312",                                delta: "-18%",  positive: true  },
-        { label: "Outliers",    value: "47",                                 delta: "+5",    positive: false },
+        { label: "Total Rows", value: fileSchema.rowCount.toLocaleString() },
+        { label: "Columns",    value: String(fileSchema.columns) },
+        { label: "Null Cells", value: nullCells.toLocaleString() },
       ]
     : [];
 
   return (
     <>
+      <Toaster position="bottom-right" />
       {/* ── Persistent Header ─────────────────────────────────────────────── */}
       <SiteHeader onLogoClick={handleReset} />
 
@@ -619,18 +591,19 @@ export default function Page() {
                 gridTemplateRows: "auto auto",
                 gridTemplateAreas: `
                   "hero   hero   stats"
-                  "line   scatter chat"
+                  "hero   hero   chat"
                 `,
               }}
             >
 
-              {/* Hero Chart */}
+              {/* Hero Chart — dynamic from backend */}
               <div style={{ gridArea: "hero" }} className="animate-fade-up">
                 <EChartWrapper
-                  options={heroBarOptions}
+                  options={dynamicChartData ?? undefined}
+                  loading={isAnalyzing}
                   height={340}
-                  title="Monthly Revenue"
-                  subtitle="Jan – Aug 2026  ·  USD thousands"
+                  title={dynamicChartData ? "Analysis Result" : undefined}
+                  subtitle={dynamicChartData ? "Generated by Datify Agent" : undefined}
                 />
               </div>
 
@@ -648,32 +621,17 @@ export default function Page() {
                     className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3 border border-white/[0.05]"
                   >
                     <span className="text-xs text-white/50 font-medium">{s.label}</span>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="text-lg font-bold tabular-nums"
-                        style={{
-                          background: "linear-gradient(135deg, #818cf8, #67e8f9)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          backgroundClip: "text",
-                        }}
-                      >
-                        {s.value}
-                      </span>
-                      {s.delta !== "—" && (
-                        <span
-                          className={`text-[10px] font-semibold rounded-full px-1.5 py-0.5 ${
-                            s.positive === true
-                              ? "text-emerald-400 bg-emerald-400/10"
-                              : s.positive === false
-                              ? "text-rose-400 bg-rose-400/10"
-                              : "text-white/30 bg-white/5"
-                          }`}
-                        >
-                          {s.delta}
-                        </span>
-                      )}
-                    </div>
+                    <span
+                      className="text-lg font-bold tabular-nums"
+                      style={{
+                        background: "linear-gradient(135deg, #818cf8, #67e8f9)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {s.value}
+                    </span>
                   </div>
                 ))}
 
@@ -682,33 +640,14 @@ export default function Page() {
                   <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider font-medium">
                     AI Status
                   </p>
-                  <EChartWrapper loading={true} height={88} />
+                  <EChartWrapper loading={isAnalyzing} height={88} />
                 </div>
               </div>
 
-              {/* Line Chart */}
-              <div style={{ gridArea: "line" }} className="animate-fade-up">
-                <EChartWrapper
-                  options={lineOptions}
-                  height={220}
-                  title="Weekly Trend"
-                  subtitle="Unique visitors"
-                />
-              </div>
-
-              {/* Scatter Chart */}
-              <div style={{ gridArea: "scatter" }} className="animate-fade-up">
-                <EChartWrapper
-                  options={scatterOptions}
-                  height={220}
-                  title="Correlation"
-                  subtitle="Feature A vs Feature B"
-                />
-              </div>
 
               {/* Chat Interface — replaces old upload CTA */}
               <div style={{ gridArea: "chat" }} className="animate-fade-up">
-                <ChatCard fileName={fileSchema.name} onQuery={handleQuery} />
+                <ChatCard fileName={fileSchema.name} onQuery={handleQuery} disabled={isAnalyzing} />
               </div>
 
             </div>

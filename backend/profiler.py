@@ -10,12 +10,15 @@ so the backend is a self-contained, importable package.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 # ── Dataset generator (development / testing utility) ─────────────────────────
@@ -128,7 +131,11 @@ class DataProfiler:
             raise FileNotFoundError(f"File not found at: {file_path}")
 
         self.file_path = file_path
-        self.df = pd.read_csv(file_path)
+        try:
+            self.df = pd.read_csv(file_path)
+        except Exception as e:
+            logger.error(f"Profiler Error: {str(e)}")
+            raise
         self.masked_df: pd.DataFrame | None = None
         self.pii_columns: list[str] = []
 
@@ -188,56 +195,65 @@ class DataProfiler:
         -------
         dict with ``dataset_info`` and per-column ``columns`` metadata.
         """
-        if self.masked_df is None:
-            self.detect_and_mask_pii()
+        try:
+            if self.masked_df is None:
+                self.detect_and_mask_pii()
 
-        schema: dict = {
-            "dataset_info": {
-                "file_name": os.path.basename(self.file_path),
-                "total_rows": int(len(self.df)),
-                "total_columns": int(len(self.df.columns)),
-            },
-            "columns": {},
-        }
-
-        for col in self.df.columns:
-            col_data = self.df[col]
-            null_count = int(col_data.isnull().sum())
-            is_pii_col = col in self.pii_columns
-
-            # Sample values from the *masked* DataFrame to prevent PII leakage.
-            raw_samples = self.masked_df[col].head(5).tolist()  # type: ignore[union-attr]
-            safe_samples = []
-            for x in raw_samples:
-                if pd.isnull(x):
-                    safe_samples.append(None)
-                elif isinstance(x, (np.integer, int)):
-                    safe_samples.append(int(x))
-                elif isinstance(x, (np.floating, float)):
-                    safe_samples.append(float(x))
-                else:
-                    safe_samples.append(str(x))
-
-            col_schema: dict = {
-                "data_type": str(col_data.dtype),
-                "null_count": null_count,
-                "is_pii": is_pii_col,
-                "summary_statistics": None,
-                "sample_values": safe_samples,
+            schema: dict = {
+                "dataset_info": {
+                    "file_name": os.path.basename(self.file_path),
+                    "total_rows": int(len(self.df)),
+                    "total_columns": int(len(self.df.columns)),
+                },
+                "columns": {},
             }
 
-            if pd.api.types.is_numeric_dtype(col_data):
-                valid = col_data.dropna()
-                if len(valid) > 0:
+            for col in self.df.columns:
+                col_data = self.df[col]
+                null_count = int(col_data.isnull().sum())
+                is_pii_col = col in self.pii_columns
+
+                # Sample values from the *masked* DataFrame to prevent PII leakage.
+                raw_samples = self.masked_df[col].head(5).tolist()  # type: ignore[union-attr]
+                safe_samples = []
+                for x in raw_samples:
+                    if pd.isnull(x):
+                        safe_samples.append(None)
+                    elif isinstance(x, (np.integer, int)):
+                        safe_samples.append(int(x))
+                    elif isinstance(x, (np.floating, float)):
+                        safe_samples.append(float(x))
+                    else:
+                        safe_samples.append(str(x))
+
+                col_schema: dict = {
+                    "data_type": str(col_data.dtype),
+                    "null_count": null_count,
+                    "is_pii": is_pii_col,
+                    "summary_statistics": None,
+                    "sample_values": safe_samples,
+                }
+
+                if pd.api.types.is_numeric_dtype(col_data):
+                    valid = col_data.dropna()
+                    if len(valid) > 0:
+                        col_schema["summary_statistics"] = {
+                            "min": float(valid.min()),
+                            "max": float(valid.max()),
+                            "mean": float(valid.mean()),
+                            "std_dev": float(valid.std()),
+                        }
+                elif col_data.dtype == "object" and not is_pii_col:
                     col_schema["summary_statistics"] = {
-                        "min": float(valid.min()),
-                        "max": float(valid.max()),
-                        "mean": float(valid.mean()),
+                        "unique_count": int(col_data.nunique()),
                     }
 
-            schema["columns"][col] = col_schema
+                schema["columns"][col] = col_schema
 
-        return schema
+            return schema
+        except Exception as e:
+            logger.error(f"Profiler Error: {str(e)}")
+            raise
 
     def to_json(self, indent: int = 4) -> str:
         """Return the privacy-first schema as a formatted JSON string."""

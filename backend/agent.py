@@ -87,7 +87,25 @@ _SYSTEM_PROMPT = (
     "4. Your ECharts configuration should be a standard JSON-compatible Python "
     "dictionary. Ensure data points plotted match the calculations in your code.\n"
     "5. ALWAYS call the `generate_data_insights` tool to return your python "
-    "code and chart configuration."
+    "code and chart configuration.\n\n"
+    "CRITICAL RULES — you MUST follow these without exception:\n\n"
+    "6. Imputation Over Deletion:\n"
+    "   - If a column has < 5% null values, impute missing data with the "
+    "median (for numeric columns) or mode (for categorical columns).\n"
+    "   - If a column has > 40% null values, drop the entire column.\n"
+    "   - NEVER drop rows using `df.dropna()` unless the user explicitly "
+    "requests it.\n\n"
+    "7. Outlier Handling:\n"
+    "   - Cap numerical outliers at the 1st and 99th percentiles using the "
+    "IQR method.\n"
+    "   - Do NOT delete outlier rows.\n\n"
+    "8. Browser Safety (Aggregation):\n"
+    "   - When generating the `chart_json` payload, NEVER pass raw datasets "
+    "exceeding 3,000 items.\n"
+    "   - You MUST use `.groupby()`, `.value_counts()`, or "
+    "`.sample(n=3000, random_state=42)` in your Pandas code before "
+    "structuring the ECharts JSON to prevent the frontend canvas from "
+    "crashing."
 )
 
 
@@ -124,6 +142,8 @@ def run_agent(
         ``python_code``  — Last generated code string.
         ``chart_json``   — ECharts config dict.
         ``attempts``     — Number of LLM calls made.
+        ``new_csv_path`` — Absolute path to the versioned output CSV
+                           (empty string on failure).
     """
     if not _client:
         return {
@@ -134,6 +154,7 @@ def run_agent(
             ),
             "python_code": "",
             "chart_json": {},
+            "new_csv_path": "",
         }
 
     sandbox = get_sandbox()
@@ -154,7 +175,7 @@ def run_agent(
     for attempt in range(max_retries + 1):
         try:
             response = _client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=4000,
                 system=_SYSTEM_PROMPT,
                 messages=messages,
@@ -172,6 +193,7 @@ def run_agent(
                     "message": "Claude failed to call the required tool.",
                     "python_code": python_code,
                     "chart_json": chart_json,
+                    "new_csv_path": "",
                 }
 
             tool_use_id = tool_use_block.id
@@ -188,6 +210,7 @@ def run_agent(
                     "python_code": python_code,
                     "chart_json": chart_json,
                     "attempts": attempt + 1,
+                    "new_csv_path": result.get("new_csv_path", ""),
                 }
 
             # ── Self-debug loop ────────────────────────────────────────────
@@ -219,12 +242,16 @@ def run_agent(
             )
 
         except Exception as exc:
-            logger.exception("Anthropic API call failed on attempt %d", attempt + 1)
+            logger.error(
+                f"Agent Error: Failed at LLM generation/parsing - {str(exc)}"
+            )
             return {
+                "success": False,
                 "status": "error",
-                "message": f"Anthropic API call failed: {exc}",
+                "message": str(exc),
                 "python_code": python_code,
                 "chart_json": chart_json,
+                "new_csv_path": "",
             }
 
     return {
@@ -232,4 +259,5 @@ def run_agent(
         "message": f"Failed to produce working code after {max_retries + 1} attempt(s).",
         "python_code": python_code,
         "chart_json": chart_json,
+        "new_csv_path": "",
     }
