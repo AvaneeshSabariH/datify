@@ -32,3 +32,4 @@ build/
 
 # Data / CSV files (often large or local-only)
 test_dataset.csv
+memory.txt
